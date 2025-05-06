@@ -1,7 +1,11 @@
-# Phishing-link-detector
 # Phishing URL Detection Script
 
 This Python script helps detect potentially suspicious or phishing URLs based on several simple heuristic rules. It checks for common phishing patterns and warns the user if any are found.
+
+GitHub Repository:  
+[https://github.com/KAVINKUMAR-ROCKY/Phishing-link-detector](https://github.com/KAVINKUMAR-ROCKY/Phishing-link-detector)
+
+---
 
 ## Features
 
@@ -11,15 +15,19 @@ This Python script helps detect potentially suspicious or phishing URLs based on
 - Detects presence of the `@` symbol (often used to obscure true URL destinations).
 - Checks URLs against a blacklist of known phishing domains.
 
+---
+
 ## Requirements
 
 - Python 3.x
-- `tldextract` library
+- `tldextract` package
+
+---
 
 ## Installation
 
-1. Clone the repository or download the script.
-2. Install the required package:
+1. Clone the repository:
 
 ```bash
-pip install tldextract
+git clone https://github.com/KAVINKUMAR-ROCKY/Phishing-link-detector.git
+cd Phishing-link-detector
