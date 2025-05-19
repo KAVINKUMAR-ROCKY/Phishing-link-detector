@@ -1,51 +1,60 @@
 import re
-import tldextract
+from urllib.parse import urlparse
+import requests
 
-# List of suspicious keywords
-suspicious_keywords = ['login', 'verify', 'update', 'banking', 'free', 'secure', 'account', 'password']
+# Custom phishing pattern (example: new-event.com.tr style)
+CUSTOM_PHISHING_PATTERN = re.compile(
+    r"https?://(?:www\.)?new-event\.com\.tr/\^.*\$/[a-zA-Z0-9]+/\?id=\d+",
+    re.IGNORECASE
+)
 
-# Simple blacklist of phishing domains (can be expanded)
-blacklist = ['phishy-domain.com', 'malicious-site.net']
+# Load known phishing domains from file or online source
+def load_known_phishing_domains(file_path=None, url=None):
+    domains = set()
+    try:
+        if file_path:
+            with open(file_path, "r", encoding="utf-8") as f:
+                domains = set(line.strip().lower() for line in f if line.strip())
+        elif url:
+            response = requests.get(url, timeout=10)
+            if response.ok:
+                domains = set(line.strip().lower() for line in response.text.splitlines() if line.strip())
+    except Exception as e:
+        print(f"[!] Failed to load phishing domains: {e}")
+    return domains
 
-def check_url(url):
-    reasons = []
+# Check if a URL matches the custom phishing format
+def is_custom_phishing(url):
+    return CUSTOM_PHISHING_PATTERN.match(url) is not None
 
-    # Extract domain and subdomain
-    extracted = tldextract.extract(url)
-    domain = extracted.domain + '.' + extracted.suffix
-    subdomain = extracted.subdomain
+# Check if a URL’s domain is in the known phishing list
+def is_known_phishing_domain(url, domain_list):
+    domain = urlparse(url).netloc.lower()
+    return domain in domain_list
 
-    # Rule 1: Check for IP address in the URL
-    if re.search(r'https?://\d{1,3}(\.\d{1,3}){3}', url):
-        reasons.append("Uses IP address instead of domain")
+def main():
+    print("Enter a URL to scan for phishing:")
+    user_url = input("URL: ").strip()
 
-    # Rule 2: Too many subdomains
-    if subdomain.count('.') >= 2:
-        reasons.append("Too many subdomains")
+    if not user_url.startswith("http"):
+        print("[!] Please enter a valid URL starting with http or https.")
+        return
 
-    # Rule 3: Suspicious keywords
-    for word in suspicious_keywords:
-        if word in url.lower():
-            reasons.append(f"Suspicious keyword detected: {word}")
-            break
+    # Load phishing domains from file (you can replace this with a live feed URL if needed)
+    domain_list = load_known_phishing_domains(file_path="phishing_domains.txt")
 
-    # Rule 4: '@' symbol in URL
-    if '@' in url:
-        reasons.append("Contains '@' symbol")
+    # Perform checks
+    is_custom = is_custom_phishing(user_url)
+    is_known = is_known_phishing_domain(user_url, domain_list)
 
-    # Rule 5: Check against blacklist
-    if domain in blacklist:
-        reasons.append("Domain is blacklisted")
+    # Output result
+    print("\nScan Results:")
+    if is_custom:
+        print("[!] URL matches known custom phishing pattern.")
+    if is_known:
+        print("[!] URL domain is listed in known phishing domains.")
+    if not is_custom and not is_known:
+        print("[✓] No phishing indicators found for this URL.")
 
-    # Final verdict
-    if reasons:
-        print(f"\nURL: {url}\nResult: **Suspicious**")
-        print("Reasons:")
-        for r in reasons:
-            print(f"- {r}")
-    else:
-        print(f"\nURL: {url}\nResult: Looks Safe (No common phishing patterns found)")
-
-# Example use
-url_input = input("Enter a URL to check: ")
-check_url(url_input)
+if __name__ == "__main__":
+    main()
