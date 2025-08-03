@@ -1,74 +1,57 @@
-import requests
-from urllib.parse import urljoin, urlparse
-from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 
-# Default phishing patterns
+def load_urls_from_file(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            urls = [line.strip() for line in file if line.strip()]
+            return urls
+    except FileNotFoundError:
+        print(f"[ERROR] File not found: {file_path}")
+        return []
+    except Exception as e:
+        print(f"[ERROR] Failed to load file: {e}")
+        return []
+
+# Extended phishing patterns list — you can add full domains too
 DEFAULT_PHISHING_PATTERNS = [
     "phishy-site.com",
-    "malicious.co/login",
+    "malicious.co",
     "fake-bank.net",
     "paypal-login-security-alert.com",
     "verify-account-now.net",
     "secure-update-account.com",
     "update-your-password.net",
     "confirm-your-identity.co",
-    "free-gift-card-offer.com"
+    "free-gift-card-offer.com",
+    "trycloudflare.com"  # <== NEW: Includes suspicious cloudflare test domains
 ]
 
-# Default URLs to scan
-DEFAULT_URLS = [
-    "https://diverse-sequence-troubleshooting-unnecessary.trycloudflare.com",
-    "https://individuals-depending-mba-tab.trycloudflare.com"
-]
-
-def fetch_links_from_page(url, timeout=10):
+def is_phishing_url(full_url, phishing_patterns):
     try:
-        response = requests.get(url, timeout=timeout)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"[ERROR] Could not access {url}: {e}")
-        return []
-
-    soup = BeautifulSoup(response.text, "html.parser")
-    anchors = soup.find_all("a", href=True)
-    links = set()
-
-    for anchor in anchors:
-        href = anchor['href'].strip()
-        if not href:
-            continue
-        full_url = urljoin(url, href)
         parsed = urlparse(full_url)
-        if parsed.scheme in ("http", "https"):
-            links.add(full_url)
-    return sorted(links)
-
-def is_phishing_url(link, patterns):
-    link = link.lower()
-    for pattern in patterns:
-        if pattern.lower() in link:
-            return True
+        hostname = parsed.hostname or ''
+        full_link = full_url.lower()
+        for pattern in phishing_patterns:
+            if pattern.lower() in hostname or pattern.lower() in full_link:
+                return True
+    except Exception as e:
+        print(f"[ERROR] Invalid URL '{full_url}': {e}")
     return False
 
-def scan_urls(url_list, phishing_patterns):
-    for site_url in url_list:
-        print(f"\n🔍 Scanning: {site_url}")
-        links = fetch_links_from_page(site_url)
-
-        if not links:
-            print("⚠️ No links found or failed to load the page.")
-            continue
-
-        print(f"✅ Found {len(links)} link(s):\n")
-        for i, link in enumerate(links, 1):
-            if is_phishing_url(link, phishing_patterns):
-                print(f"{i}. ⚠️ [SUSPICIOUS] {link}")
-            else:
-                print(f"{i}. ✅ {link}")
-
 def main():
-    print("🌐 Phishing Link Scanner - Default Mode")
-    scan_urls(DEFAULT_URLS, DEFAULT_PHISHING_PATTERNS)
+    file_path = "phishing_urls.txt"
+    urls = load_urls_from_file(file_path)
+
+    if not urls:
+        print("[INFO] No URLs to scan. Make sure the file is not empty.")
+        return
+
+    print(f"\n🔍 Scanning {len(urls)} URL(s) from '{file_path}'...\n")
+    for i, url in enumerate(urls, 1):
+        if is_phishing_url(url, DEFAULT_PHISHING_PATTERNS):
+            print(f"{i}. ⚠️ [SUSPICIOUS] {url}")
+        else:
+            print(f"{i}. ✅ [SAFE] {url}")
 
 if __name__ == "__main__":
     main()
