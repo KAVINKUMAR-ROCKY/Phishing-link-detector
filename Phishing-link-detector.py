@@ -1,18 +1,6 @@
 from urllib.parse import urlparse
 
-def load_urls_from_file(file_path):
-    try:
-        with open(file_path, 'r') as file:
-            urls = [line.strip() for line in file if line.strip()]
-            return urls
-    except FileNotFoundError:
-        print(f"[ERROR] File not found: {file_path}")
-        return []
-    except Exception as e:
-        print(f"[ERROR] Failed to load file: {e}")
-        return []
-
-# Extended phishing patterns list — you can add full domains too
+# Default phishing patterns (expandable)
 DEFAULT_PHISHING_PATTERNS = [
     "phishy-site.com",
     "malicious.co",
@@ -23,8 +11,20 @@ DEFAULT_PHISHING_PATTERNS = [
     "update-your-password.net",
     "confirm-your-identity.co",
     "free-gift-card-offer.com",
-    "trycloudflare.com"  # <== NEW: Includes suspicious cloudflare test domains
+    "trycloudflare.com"  # Catch all suspicious trycloudflare subdomains
 ]
+
+def load_urls_from_file(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            urls = [line.strip() for line in file if line.strip()]
+            return urls
+    except FileNotFoundError:
+        print(f"[INFO] File '{file_path}' not found. Skipping file check.")
+        return []
+    except Exception as e:
+        print(f"[ERROR] Failed to load file: {e}")
+        return []
 
 def is_phishing_url(full_url, phishing_patterns):
     try:
@@ -38,20 +38,33 @@ def is_phishing_url(full_url, phishing_patterns):
         print(f"[ERROR] Invalid URL '{full_url}': {e}")
     return False
 
+def check_and_print(url, index=None):
+    status = "⚠️ [SUSPICIOUS]" if is_phishing_url(url, DEFAULT_PHISHING_PATTERNS) else "✅ [SAFE]"
+    if index:
+        print(f"{index}. {status} {url}")
+    else:
+        print(f"{status} {url}")
+
 def main():
+    print("🔐 Phishing URL Scanner\n")
+
+    # 1. Manual check
+    user_url = input("Enter a URL to check manually: ").strip()
+    if not user_url.startswith(("http://", "https://")):
+        user_url = "https://" + user_url
+    print("\nResult for entered URL:")
+    check_and_print(user_url)
+
+    # 2. File-based check
     file_path = "phishing_urls.txt"
-    urls = load_urls_from_file(file_path)
+    file_urls = load_urls_from_file(file_path)
 
-    if not urls:
-        print("[INFO] No URLs to scan. Make sure the file is not empty.")
-        return
-
-    print(f"\n🔍 Scanning {len(urls)} URL(s) from '{file_path}'...\n")
-    for i, url in enumerate(urls, 1):
-        if is_phishing_url(url, DEFAULT_PHISHING_PATTERNS):
-            print(f"{i}. ⚠️ [SUSPICIOUS] {url}")
-        else:
-            print(f"{i}. ✅ [SAFE] {url}")
+    if file_urls:
+        print(f"\n🔍 Scanning {len(file_urls)} URL(s) from '{file_path}':\n")
+        for i, url in enumerate(file_urls, 1):
+            check_and_print(url, i)
+    else:
+        print("\n[INFO] No URLs to scan from file.")
 
 if __name__ == "__main__":
     main()
